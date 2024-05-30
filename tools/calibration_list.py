@@ -110,14 +110,14 @@ def ECE(list_data, keys=['Output'], bin_num=100, correct_fn=None, vis=False):
             xycoords='axes points',fontsize=34,bbox=bbox
             )
     plt.tight_layout()
-    plt.savefig('trba_none.jpg')
+    plt.savefig('dcss_sta.jpg')
 
     # return ECE
 
 if __name__ == '__main__':
 
     file_name = [
-        '/home/mdisk1/xukeke/Consistency_Regularization_STR/saved_models/TRBA/base/exp_test/all_dataset_preds.json',
+        '/home/mdisk2/xukeke/CR_STR/exp_json/dcss_sta.json',
     ]
 
     # file_name = [

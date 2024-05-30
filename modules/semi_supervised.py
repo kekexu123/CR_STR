@@ -5,7 +5,7 @@ import numpy as np
 import json
 
 from model import Model
-from .cali_loss import ClassAwareLablesmoothing_v1, LabelAwareSmoothing, ClassAwareLablesmoothing_v2, ClassAwareLablesmoothing_v3
+from .cali_loss import ClassAwareLablesmoothing_v1, LabelAwareSmoothing, ClassAwareLablesmoothing_v2, ClassAwareLablesmoothing_v3, ClassAwareLablesmoothing_v4
 from .loss_coral import coral_loss
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -88,7 +88,8 @@ class CrossEntropyLoss(nn.Module):
         elif opt.calibrator == 'CAL':
             # self.ce_criterion = ClassAwareLablesmoothing_v1(ignore_index=converter.dict['[PAD]'], cls_num_list=cls_num_list, alpha=opt.alpha, head_cls=head_cls).to(device)
             # self.ce_criterion = ClassAwareLablesmoothing_v2(ignore_index=converter.dict['[PAD]'], cls_num_list=cls_num_list, alpha=opt.alpha, head_cls=head_cls).to(device)
-            self.ce_criterion = ClassAwareLablesmoothing_v3(ignore_index=converter.dict['[PAD]'], cls_num_list=cls_num_list, alpha=opt.alpha, head_cls=head_cls).to(device)
+            # self.ce_criterion = ClassAwareLablesmoothing_v3(ignore_index=converter.dict['[PAD]'], cls_num_list=cls_num_list, alpha=opt.alpha, head_cls=head_cls).to(device)
+            self.ce_criterion = ClassAwareLablesmoothing_v4(ignore_index=converter.dict['[PAD]'], cls_num_list=cls_num_list, alpha=opt.alpha, head_cls=head_cls).to(device)
         else:
             self.ce_criterion = torch.nn.CrossEntropyLoss(ignore_index=converter.dict['[PAD]']).to(device)
         if opt.Prediction == 'Attn':

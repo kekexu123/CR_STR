@@ -195,7 +195,7 @@ class ClassAwareLablesmoothing_v3(nn.Module):
         self.confidence = 1.0 - alpha
         self.smoothing = alpha
         self.normalize_length = normalize_length
-        self.cls_smooth = smooth_tail + (0.1 - smooth_tail) * (np.array(cls_num_list) - min(cls_num_list)) / (max(cls_num_list) - min(cls_num_list))
+        self.cls_smooth = smooth_tail + (0.05 - smooth_tail) * (np.array(cls_num_list) - min(cls_num_list)) / (max(cls_num_list) - min(cls_num_list))
         self.head_cls = head_cls
     def forward(self, input, target, *args):
         self.size = input.size(-1)
@@ -221,6 +221,63 @@ class ClassAwareLablesmoothing_v3(nn.Module):
         
             smoothing[i:j, :] = example_smoothing + cls_smoothing
             i=j+1
+        
+        true_dist = smoothing / (self.size - 1)
+        confidence = 1 - true_dist.sum(-1)
+        true_dist.scatter_(1, target.unsqueeze(1), confidence.unsqueeze(1))
+        kl = self.criterion(torch.log_softmax(input, dim=1), true_dist)
+        denom = len(target) if self.normalize_length else batch_size
+        return kl.sum() / denom
+    
+class ClassAwareLablesmoothing_v4(nn.Module):
+    '''
+    相比于v3, 修改了example_smoothing,使之与cer和self.smoothing成正相关,而不再是编辑距离
+    '''
+    def __init__(self, 
+                ignore_index=0,
+                alpha=0.0,
+                smooth_tail=0.0,
+                cls_num_list=None,
+                head_cls=None,
+                normalize_length=True,
+                **kwargs):
+        super(ClassAwareLablesmoothing_v4, self).__init__()
+        self.criterion = nn.KLDivLoss(reduction="none")
+        self.cross_entropy = nn.CrossEntropyLoss()
+        self.padding_idx = ignore_index
+        self.confidence = 1.0 - alpha
+        self.smoothing = alpha
+        self.normalize_length = normalize_length
+        self.cls_smooth = smooth_tail + (0.05 - smooth_tail) * (np.array(cls_num_list) - min(cls_num_list)) / (max(cls_num_list) - min(cls_num_list))
+        self.head_cls = head_cls
+    def forward(self, input, target, *args):
+        self.size = input.size(-1)
+        batch_size = input.size(0)
+        input = input.view(-1, input.shape[-1])
+        target = target.view(-1)
+        index = torch.nonzero(target != self.padding_idx).squeeze()
+        input = input[index, :]
+        target = target[index]
+
+        pred_probability, pred_index = torch.softmax(input, dim=1).max(1)
+
+        smoothing = torch.zeros_like(input)
+        i=0
+
+        for j in torch.nonzero(target == 3).squeeze().view(-1):
+            if i < j:  # 确保i和j不相等，避免除以零
+                edit_d = ed.eval(target[i:j].tolist(), pred_index[i:j].tolist())
+                if len(target[i:j].tolist()) > 0:  # 再次检查以确保列表不为空
+                    beta = edit_d / len(target[i:j].tolist())
+                    example_smoothing = 1 - (1 - beta) ** (self.smoothing)
+                    example_smoothing = example_smoothing * torch.ones_like(input[i:j,:])
+                    cls_smoothing = torch.zeros_like(input[i:j,:])
+                    for t in range(j-i):
+                        if target[i+t] in self.head_cls:
+                            cls_smoothing[t, :] = torch.tensor(self.cls_smooth).to(input.device)
+                
+                    smoothing[i:j, :] = example_smoothing + cls_smoothing
+            i = j + 1
         
         true_dist = smoothing / (self.size - 1)
         confidence = 1 - true_dist.sum(-1)

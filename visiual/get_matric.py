@@ -3,14 +3,18 @@ import numpy as np
 from matplotlib import pyplot as plt
 from get_op_list import get_op_seq
 import heapq
+import re
 
 
 def visual(data, classes='0123456789abcdefghijklmnopqrstuvwxyz'):
     classes = list(classes)  # + ['-']
     hot = np.zeros((len(classes), len(classes)))
+    out_of_char = ''.join(classes)
     # token_confs = np.zeros((len(classes), len(classes)))
     for d in data:
         pred, gt = d[2], d[3].lower()
+        pred = re.sub(f'[^{out_of_char}]', '', pred)
+        gt = re.sub(f'[^{out_of_char}]', '', gt)
         # token_conf = d[1]
         if gt == pred:
             continue
@@ -110,7 +114,7 @@ def plot_Matrix(cm, classes, title=None, cmap=plt.cm.Blues, path='confuse_matric
 if __name__ == '__main__':
     # paths = ['json/CRNN_MJ.json','json/NRNC_MJ.json','json/NVNC_MJ.json','json/TRBC_MJ.json']
     #paths = ['json/CRNN.json','json/NRNC.json','json/NVNC.json','json/TRBC.json']
-    paths = ['exp_json/trba_kldiv.json']
+    paths = ['exp_json/dcss_all.json']
     #paths = ['json/CRNN_MJ.json','json/NRNC_MJ.json','json/NVNC_MJ.json','json/TRBC_MJ.json','json/CRNN.json','json/NRNC.json','json/NVNC.json','json/TRBC.json']
     # weight = [0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125]            # 加起来等于1
 
@@ -119,6 +123,12 @@ if __name__ == '__main__':
         with open(path, 'r', encoding='utf-8') as f:
             data += json.load(f)
 
-    hot = visual(data)
+    # hot = visual(data, classes='eaostrinlchudmpgbfywkvx012j354z9678q')
+    hot = visual(data, classes='esaitrnoldcuhmgpbyfwvkzxjq1293056487')
+    # with open('dataset/charset_67.txt','r') as f:
+    #         classes = [line.strip('\n') for line in f.readlines()]
+    #         classes = ''.join(classes)
     
-    plot_Matrix(hot, '0123456789abcdefghijklmnopqrstuvwxyz', path=f'visiual/confused_matrix/TRBA_kldiv_matrix.jpg')
+    # plot_Matrix(hot, '0123456789abcdefghijklmnopqrstuvwxyz', path=f'visiual/confused_matrix/TRBA_kldiv_matrix.jpg')
+    # plot_Matrix(hot, 'eaostrinlchudmpgbfywkvx012j354z9678q', path=f'visiual/confused_matrix/TRBA_matrix.jpg')
+    plot_Matrix(hot, 'esaitrnoldcuhmgpbyfwvkzxjq1293056487', path=f'visiual/confused_matrix/dcss_matrix_all.pdf')

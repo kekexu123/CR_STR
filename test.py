@@ -47,7 +47,18 @@ def benchmark_all_eval(model,
             # 'IIIT5k_3000', 'SVT', 'IC13_1015','IC15_2077', 'SVTP', 'CUTE80'
             # 'IC15_1811'
         ]
-
+    elif opt.eval_type == 'common_six':
+        eval_data_list = [
+            'IIIT5k_3000', 'IC13_1015', 'SVTP', 'CUTE80', 'IC15_1811', 'SVT'
+        ]
+    elif opt.eval_type == 'challenge_dataset':
+        eval_data_list = [
+            'COCO_9896', 'CTW_1572', 'TT_2201', 'HOST_2416', 'WOST_2416'
+        ]
+    elif opt.eval_type == 'all':
+        eval_data_list = [
+            'IIIT5k_3000', 'IC13_1015', 'SVTP', 'CUTE80', 'IC15_1811', 'SVT', 'COCO_9896', 'CTW_1572', 'TT_2201', 'HOST_2416', 'WOST_2416'
+        ]
     elif opt.eval_type == 'addition':
         """ evaluation with 7 additionally collected evaluation datasets """
         eval_data_list = [
@@ -143,11 +154,11 @@ def benchmark_all_eval(model,
     log.close()
 
     # for convenience
-    today = date.today()
-    log_all_model = open(f'./evaluation_log/log_multiple_test_{today}.txt',
-                         'a')
-    log_all_model.write('\t'.join(accuracy_list) + '\n')
-    log_all_model.close()
+    # today = date.today()
+    # log_all_model = open(f'./evaluation_log/log_multiple_test_{today}.txt',
+    #                      'a')
+    # log_all_model.write('\t'.join(accuracy_list) + '\n')
+    # log_all_model.close()
 
     return total_accuracy, eval_data_list, accuracy_list
 

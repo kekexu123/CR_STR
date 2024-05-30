@@ -199,8 +199,8 @@ def parser_args():
                         default=1,
                         help='Mean Teacher consistency weight')
     parser.add_argument('--lambda_mmd', default=0.01, type=float)
-    parser.add_argument('--confident_threshold', default=0.5, type=float)
-    parser.add_argument('--l_confident_threshold', default=0.6, type=float)
+    parser.add_argument('--confident_threshold', default=0.9, type=float)    # 0.5
+    parser.add_argument('--l_confident_threshold', default=0.95, type=float)   # 0.6
     parser.add_argument('--uda_softmax_temp', default=0.4, type=float)
     parser.add_argument('--eval_type', default="simple")
     parser.add_argument('--projection_type',

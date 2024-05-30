@@ -20,7 +20,7 @@ from model import Model
 from test import validation, benchmark_all_eval
 from modules.semi_supervised import CrossEntropyLoss, KLDivLoss, PseudoLabel
 from modules.loss_robust import RobustSmoothLoss, RobustSmoothLoss_v2
-from modules.cali_loss import LabelAwareSmoothing, ClassAwareLablesmoothing_v1, ClassAwareLablesmoothing_v2, ClassAwareLablesmoothing_v3
+from modules.cali_loss import *
 from config_parser import parser_args
 import pdb
 from torch.utils.tensorboard import SummaryWriter
@@ -219,10 +219,10 @@ def train_base(opt,
                 loss = loss + loss_SemiSL
                 semi_loss_avg.add(loss_SemiSL)
                 confident_ratio_avg.add(confident_ratio)
-            if l_confident_ratio > 0 and l_da is not None:
-                loss = loss + l_da
-                da_loss_avg.add(l_da)
-                l_confident_ratio_avg.add(l_confident_ratio)
+            # if l_confident_ratio > 0 and l_da is not None:
+            #     loss = loss + l_da
+            #     da_loss_avg.add(l_da)
+            #     l_confident_ratio_avg.add(l_confident_ratio)
         elif opt.semi in ['KLDiv']:
             t0 = time.time()
             data_dict = unl_loader.get_batch()
@@ -269,6 +269,10 @@ def train_base(opt,
         else:
             writer.add_scalar(tag="iter_max_conf", 
                         scalar_value=iter_conf_list.max(),  
+                        global_step=iteration  
+                        )
+            writer.add_scalar(tag="train_loss", 
+                        scalar_value=loss.item(),  
                         global_step=iteration  
                         )
         model.zero_grad()
@@ -471,7 +475,7 @@ if __name__ == "__main__":
         save_path = f'{opt.model_name}/base/{opt.exp_name}'
     else:
         if opt.robust:
-            save_path = f'{opt.model_name}/robust/alpha{opt.alpha}/exp_base{opt.exp_base}/{opt.exp_name}'
+            save_path = f'{opt.model_name}/robust/{opt.calibrator}/alpha{opt.alpha}/exp_base{opt.exp_base}/{opt.exp_name}'
         else:
             save_path = f'{opt.model_name}/{opt.semi}/{opt.exp_name}/{opt.calibrator}/{opt.alpha}'
     os.makedirs(f'{opt.checkpoint_root}/{save_path}', exist_ok=True)
@@ -496,6 +500,12 @@ if __name__ == "__main__":
         opt.sos_token_index = converter.dict['[SOS]']
         opt.eos_token_index = converter.dict['[EOS]']
     opt.num_class = len(converter.character)
+
+    with open('datasets/char_67_num.json') as f:
+        cls_num_list = json.load(f)
+    num_k = min(cls_num_list)
+    cls_num_list = [num_k]*5 + cls_num_list
+    head_cls = list(np.argsort(cls_num_list)[-10:][::-1])
 
     model = Model(opt)
     print('model input parameters', opt.imgH, opt.imgW, opt.num_fiducial,
@@ -537,6 +547,8 @@ if __name__ == "__main__":
             criterion = RobustSmoothLoss_v2(
                 opt,
                 ignore_index=converter.dict['[PAD]'], 
+                head_cls=head_cls,
+                cls_num_list=cls_num_list,
                 alpha=opt.alpha,
                 exp_base=opt.exp_base,
                 transit_time_ratio=opt.transit_time_ratio,
@@ -547,17 +559,13 @@ if __name__ == "__main__":
             # criterion = torch.nn.CrossEntropyLoss(
             #     ignore_index=converter.dict['[PAD]']).to(device)
             
-            with open('datasets/char_67_num.json') as f:
-                cls_num_list = json.load(f)
-            num_k = min(cls_num_list)
-            cls_num_list = [num_k]*5 + cls_num_list
-            head_cls = list(np.argsort(cls_num_list)[-10:][::-1])
             if opt.calibrator == 'LAS': 
                 criterion = LabelAwareSmoothing(ignore_index=converter.dict['[PAD]'], cls_num_list=cls_num_list, alpha=opt.alpha).to(device)
             elif opt.calibrator == 'CAL':
                 # criterion = ClassAwareLablesmoothing_v1(ignore_index=converter.dict['[PAD]'], cls_num_list=cls_num_list, alpha=opt.alpha, head_cls=head_cls).to(device)
                 # criterion = ClassAwareLablesmoothing_v2(ignore_index=converter.dict['[PAD]'], cls_num_list=cls_num_list, alpha=opt.alpha, head_cls=head_cls).to(device)
-                criterion = ClassAwareLablesmoothing_v3(ignore_index=converter.dict['[PAD]'], cls_num_list=cls_num_list, alpha=opt.alpha, head_cls=head_cls).to(device)
+                # criterion = ClassAwareLablesmoothing_v3(ignore_index=converter.dict['[PAD]'], cls_num_list=cls_num_list, alpha=opt.alpha, head_cls=head_cls).to(device)
+                criterion = ClassAwareLablesmoothing_v4(ignore_index=converter.dict['[PAD]'], cls_num_list=cls_num_list, alpha=opt.alpha, head_cls=head_cls).to(device)
             else:
                 criterion = torch.nn.CrossEntropyLoss(ignore_index=converter.dict['[PAD]']).to(device)
             criterion_val = torch.nn.CrossEntropyLoss(ignore_index=converter.dict['[PAD]']).to(device)

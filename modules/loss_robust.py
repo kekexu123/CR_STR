@@ -172,6 +172,8 @@ class RobustSmoothLoss_v2(nn.Module):
     # 去掉example_trust部分
     def __init__(self, opt,
                 ignore_index, 
+                head_cls,
+                cls_num_list,
                 alpha=0.0, 
                 exp_base=0,
                 transit_time_ratio=0.2,
@@ -179,8 +181,9 @@ class RobustSmoothLoss_v2(nn.Module):
                 **kwargs):
         super(RobustSmoothLoss_v2, self).__init__()
         self.ce_loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_index)
-        self.cali_loss = GraduatedLabelSmoothingAttn(ignore_index=ignore_index, alpha=alpha)
+        # self.cali_loss = GraduatedLabelSmoothingAttn(ignore_index=ignore_index, alpha=alpha)
         # self.cali_loss = LabelSmoothingLoss(ignore_index=ignore_index, alpha=alpha)
+        self.cali_loss = ClassAwareLablesmoothing_v4(ignore_index=ignore_index, cls_num_list=cls_num_list, alpha=alpha, head_cls=head_cls)
 
         self.total_iterations = opt.num_iter
         self.exp_base = exp_base #
@@ -221,11 +224,7 @@ class RobustSmoothLoss_v2(nn.Module):
                 )
 
             global_trust = 1 / (1 + torch.exp(-self.exp_base * time_ratio_minus_half))
-            # example_trust = 1 - H_pred_probs / H_uniform
-            # the trade-off
             self.epsilon = global_trust 
-            # from shape [N] to shape [N, 1]
-            # self.epsilon = self.epsilon[:, None]
 
 
     def forward(self, input, target, cur_time):
@@ -260,7 +259,7 @@ class RobustSmoothLoss_v2(nn.Module):
         ce_loss = self.ce_loss(input.view(-1, input.shape[-1]), target.contiguous().view(-1))
         self.update_epsilon_progressive_adaptive(cur_time)
         cali_loss = self.cali_loss(input, target)
-        loss = ce_loss + self.epsilon * cali_loss
+        loss = (1- self.epsilon) * ce_loss + self.epsilon * cali_loss
 
         return loss
     
